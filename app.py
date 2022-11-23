@@ -4,12 +4,13 @@ from flask import Flask, flash, jsonify, request, redirect, url_for
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 from flask import current_app
-import base64
 import redis 
-import struct
 import binascii
+import zipfile
 
 UPLOAD_FOLDER = 'uploads'
+ARCHAVE_FILE = 'uploads/archive.zip'
+ARCHIVE_PASSWORD = b"dsdy8271@#&^$&(!@#ayan0928S#B"
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
                                     , 'pdf':'25 50 44 46 2D'
@@ -21,6 +22,7 @@ ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
 # app.config['REDIS_HOST'] = '127.0.0.1'
 # app.config['REDIS_PORT'] = 6379
 # app.config['REDIS_DB'] = 0
@@ -40,8 +42,7 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    checkDirectory()
     files =os.listdir(app.config['UPLOAD_FOLDER'])
     for file in files:
         
@@ -53,6 +54,8 @@ def repair_redis():
                 redis1.set(str(file),str(file))
 
     return """{{status:200,msg:"success "}}"""
+
+
         
     
 
@@ -97,6 +100,9 @@ def saveFileOnDirectory(file):
             #path = current_app.root_path+"/"+app.config['UPLOAD_FOLDER']+
     filePath = os.path.join(current_app.root_path,app.config['UPLOAD_FOLDER'], filename)
     file.save(filePath)
+    compress_File(filePath=os.path.join(app.config['UPLOAD_FOLDER'] ,filename) )
+
+
     if checkFileRealExtention(fileName=filePath):
         redis1.set(justfileName,filename)
         return filename,justfileName
@@ -141,6 +147,10 @@ def getUploadUrl():
     uploadsurl = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return uploadsurl
 
+def getArchiveUrl():
+    #archiveFile = os.path.join(current_app.root_path, app.config['ARCHAVE_FILE'])
+    return app.config['ARCHAVE_FILE']
+
 
 
 def check_res_db(filename):
@@ -152,6 +162,22 @@ def check_res_db(filename):
 
 ### end ### download
 
+def compress_File(filePath):
+    
+
+
+    try:
+        if(checkArchiveFile() == False ):
+            return
+
+        with zipfile.ZipFile(getArchiveUrl(), "a") as zf:
+            zf.write(filePath)
+            zf.setpassword(ARCHIVE_PASSWORD)
+            zf.close()
+        return True
+    except Exception as ex:
+        print(ex)
+        return False
 
     
 def getSecureFileName(orginalFileName:str):
@@ -169,7 +195,7 @@ def checkFileRealExtention(fileName):
     with open(fileName, mode='rb') as file: # b is important -> binary
         fileContent = file.read()
         header = str(binascii.hexlify(fileContent))[2:-1]
-    if header.startswith(magicNum):
+    if header.startswith(magicNum.lower().replace(' ','')):
         return True
     else:
         return False
@@ -182,7 +208,22 @@ def getFileFileExtention(file):
     else:
         return None
     
+def checkDirectory():
+    try:
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+        True
+    except:
+        return False
 
+def checkArchiveFile():
+    try:
+        if not os.path.exists(app.config['ARCHAVE_FILE']):
+            open(app.config['ARCHAVE_FILE'],"w")
+        return True
+    except Exception as ex:
+        print(ex)
+        return False
 
 
 
