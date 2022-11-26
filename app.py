@@ -7,6 +7,8 @@ from flask import current_app
 import redis 
 import binascii
 import zipfile
+import base64
+import json
 
 UPLOAD_FOLDER = 'uploads'
 ARCHAVE_FILE = 'uploads/archive.zip'
@@ -37,7 +39,8 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 #todoooo : save date time of modiy images
 #todo : search on images
 #todo : load images as list
-#todooo : load images as base64
+#
+# Done : load images as base64
 #Done : redefine redise db
 
 @app.route('/repair', methods=['GET', 'POST'])
@@ -75,9 +78,6 @@ def upload_file():
         
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
-        
-        print(">>>>",file.headers)
-        
         
         if file and allowed_file(file.filename):
             filename, justfileName = saveFileOnDirectory(file)
@@ -127,21 +127,28 @@ def download(filename:str):
     return file
 
 
-# @app.route('/downloadBase64/<path:fileID>', methods=['GET', 'POST'])
-# def downloadBase64(fileID:str):
-#     if "." in fileID:
-#         return """{{status:200,msg:"wrong file name"}}"""
-#     db_fileName = check_res_db(fileID)
-#     if (db_fileName or "")=="":
-#         return """{{status:200,msg:"file not exits"}}"""
-#     imagedata=""
-#     uploadsurl = getUploadUrl()
-#     #file = send_from_directory(uploadsurl, str(db_fileName))
-#     print(os.path.join(uploadsurl, str(db_fileName))+".jpeg")
-#     with open(os.path.join(uploadsurl, str(db_fileName)), "wb") as fh:
-#         fh.write(base64.decodebytes(imagedata+".jpeg"))
-#     return imagedata
+@app.route('/downloadBase64/<path:fileID>', methods=['GET', 'POST'])
+def downloadBase64(fileID:str):
+    if "." in fileID:
+        return """{{status:200,msg:"wrong file name"}}"""
+    db_fileName = check_res_db(fileID)
+    if (db_fileName or "")=="":
+        return """{{status:200,msg:"file not exits"}}"""
+    imagedata=""
+    uploadsurl = getUploadUrl()
+    #file = send_from_directory(uploadsurl, str(db_fileName))
+    
+    with open(os.path.join(uploadsurl, str(db_fileName)), "rb") as fh:
+       f= base64.b64encode(fh.read())
+    return f
 
+@app.route('/all',methods = ["GET"])
+def getAllFile():
+    allkeys = redis1.keys("*")
+    kes =[x.decode("utf-8") for x in allkeys ]
+    
+    return json.dumps(kes)
+    #return "keys:[{0}]".format(kes)
 
 def getUploadUrl():
     uploadsurl = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
@@ -226,6 +233,11 @@ def checkArchiveFile():
         return False
 
 
+
+@app.after_request
+def after_requst(response):
+    print("Log>>>>>>>Some Requst on ",datetime.now(),response)
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0', port=5055)
