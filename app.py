@@ -144,20 +144,20 @@ def download(filename:str):
     return file
 
 
-@app.route('/downloadBase64/<path:fileID>', methods=['GET', 'POST'])
-def downloadBase64(fileID:str):
-    if "." in fileID:
-        return """{{status:200,msg:"wrong file name"}}"""
-    db_fileName = check_res_db(fileID)
-    if (db_fileName or "")=="":
-        return """{{status:200,msg:"file not exits"}}"""
-    imagedata=""
-    uploadsurl = getUploadUrl()
-    #file = send_from_directory(uploadsurl, str(db_fileName))
+# @app.route('/downloadBase64/<path:fileID>', methods=['GET', 'POST'])
+# def downloadBase64(fileID:str):
+#     if "." in fileID:
+#         return """{{status:200,msg:"wrong file name"}}"""
+#     db_fileName = check_res_db(fileID)
+#     if (db_fileName or "")=="":
+#         return """{{status:200,msg:"file not exits"}}"""
+#     imagedata=""
+#     uploadsurl = getUploadUrl()
+#     #file = send_from_directory(uploadsurl, str(db_fileName))
     
-    with open(os.path.join(uploadsurl, str(db_fileName)), "rb") as fh:
-       f= base64.b64encode(fh.read())
-    return f
+#     with open(os.path.join(uploadsurl, str(db_fileName)), "rb") as fh:
+#        f= base64.b64encode(fh.read())
+#     return f
 
 @app.route('/all',methods = ["GET"])
 def getAllFileKeys():
