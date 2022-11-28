@@ -9,8 +9,12 @@ import binascii
 import zipfile
 import base64
 import json
+import numpy as np
+import cv2 as cv
+
 
 UPLOAD_FOLDER = 'uploads'
+UPLOAD_THUMBNAIL_FOLDER = 'uploads/thumbnail'
 ARCHAVE_FILE = 'uploads/archive.zip'
 ARCHIVE_PASSWORD = b"dsdy8271@#&^$&(!@#ayan0928S#B"
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -25,6 +29,8 @@ ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
+app.config['UPLOAD_THUMBNAIL_FOLDER'] = UPLOAD_THUMBNAIL_FOLDER
+
 # app.config['REDIS_HOST'] = '127.0.0.1'
 # app.config['REDIS_PORT'] = 6379
 # app.config['REDIS_DB'] = 0
@@ -38,10 +44,10 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 #todo : face detection on image
 #todoooo : save date time of modiy images
 #todo : search on images
-#todo : load images as list
-#
+#todo : Get Tumb Nail
+# Done : load images as list
 # Done : load images as base64
-#Done : redefine redise db
+# Done : redefine redise db
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
@@ -76,8 +82,8 @@ def upload_file():
         if file.filename == '':
             return """{{status:200,msg:"No selected file"}}"""
         
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
+        if checkDirectory() ==False:
+            return """{{status:500,msg:"Some thing wrong"}}"""
         
         if file and allowed_file(file.filename):
             filename, justfileName = saveFileOnDirectory(file)
@@ -115,7 +121,9 @@ def saveFileOnDirectory(file):
 
 ### begin ### down load 
 
-@app.route('/download/<path:filename>', methods=['GET', 'POST'])
+@app.route('/download/file/<path:filename>',endpoint='file', methods=['GET', 'POST'])
+@app.route('/download/tumbnail/<path:filename>',endpoint='tumbnail', methods=['GET', 'POST'])
+@app.route('/download/base64/<path:filename>',endpoint='base64', methods=['GET', 'POST'])
 def download(filename:str):
     if "." in filename:
         return """{{status:200,msg:"wrong file name"}}"""
@@ -123,7 +131,16 @@ def download(filename:str):
     if (orginalFileName or "") == "":
         return """{{status:200,msg:"file not exits"}}"""
     uploadsurl = getUploadUrl()
-    file = send_from_directory(uploadsurl, str(orginalFileName))
+    
+    
+    if request.endpoint.lower()=='tumbnail':
+        tmpath,fName = GetThumbNail(orginalFileName)
+        file = send_from_directory(tmpath,fName)
+    elif request.endpoint.lower()=='file':
+        file = send_from_directory(uploadsurl, str(orginalFileName))
+    elif request.endpoint.lower() == "base64":
+        with open(os.path.join(uploadsurl, str(orginalFileName)), "rb") as fh:
+            file= base64.b64encode(fh.read())
     return file
 
 
@@ -143,16 +160,18 @@ def downloadBase64(fileID:str):
     return f
 
 @app.route('/all',methods = ["GET"])
-def getAllFile():
+def getAllFileKeys():
     allkeys = redis1.keys("*")
     kes =[x.decode("utf-8") for x in allkeys ]
-    
     return json.dumps(kes)
     #return "keys:[{0}]".format(kes)
 
 def getUploadUrl():
     uploadsurl = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return uploadsurl
+
+def getFileURL(fileName):
+    return os.path.join(getUploadUrl(), str(fileName))
 
 def getArchiveUrl():
     #archiveFile = os.path.join(current_app.root_path, app.config['ARCHAVE_FILE'])
@@ -192,6 +211,24 @@ def getSecureFileName(orginalFileName:str):
     return filename,filename +"."+ orginalFileName.split(".")[1]
 
 
+def GetThumbNail(fileName):
+    """get file Name as input and  return path and file Name as output """
+    try:
+        filepath = getFileURL(fileName)
+        img = cv.imread(filepath)
+        thumbNailSize=(100,100)
+        imRes = cv.resize(img,thumbNailSize,interpolation=cv.INTER_CUBIC)
+        thumbFilePath=os.path.join(app.config['UPLOAD_THUMBNAIL_FOLDER'], fileName)
+        cv.imwrite( thumbFilePath,imRes)
+        return app.config['UPLOAD_THUMBNAIL_FOLDER'] , fileName
+    except:
+        return None
+
+    
+
+
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -219,9 +256,13 @@ def checkDirectory():
     try:
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
+
+        if not os.path.exists(app.config['UPLOAD_THUMBNAIL_FOLDER']):
+            os.makedirs(app.config['UPLOAD_THUMBNAIL_FOLDER'])
         True
     except:
         return False
+
 
 def checkArchiveFile():
     try:
