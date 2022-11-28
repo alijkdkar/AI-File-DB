@@ -1,2 +1,6 @@
 # AI-File-DB
-file keeper for use in all projects as docekrs image
+this app is file holder and objects db.
+it's safe on save file and tested with some profisnal hackers.
+
+
+this use of redis.
