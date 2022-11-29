@@ -15,6 +15,7 @@ import cv2 as cv
 
 UPLOAD_FOLDER = 'uploads'
 UPLOAD_THUMBNAIL_FOLDER = 'uploads/thumbnail'
+UPLOAD_FACES_FOLDER = 'uploads/Faces'
 ARCHAVE_FILE = 'uploads/archive.zip'
 ARCHIVE_PASSWORD = b"dsdy8271@#&^$&(!@#ayan0928S#B"
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -30,6 +31,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
 app.config['UPLOAD_THUMBNAIL_FOLDER'] = UPLOAD_THUMBNAIL_FOLDER
+app.config['UPLOAD_FACES_FOLDER'] = UPLOAD_FACES_FOLDER
 
 # app.config['REDIS_HOST'] = '127.0.0.1'
 # app.config['REDIS_PORT'] = 6379
@@ -44,7 +46,8 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 #todo : face detection on image
 #todoooo : save date time of modiy images
 #todo : search on images
-#todo : Get Tumb Nail
+#todo : Add saltToFileName
+# Done : Get Tumb Nail
 # Done : load images as list
 # Done : load images as base64
 # Done : redefine redise db
@@ -124,6 +127,7 @@ def saveFileOnDirectory(file):
 @app.route('/download/file/<path:filename>',endpoint='file', methods=['GET', 'POST'])
 @app.route('/download/tumbnail/<path:filename>',endpoint='tumbnail', methods=['GET', 'POST'])
 @app.route('/download/base64/<path:filename>',endpoint='base64', methods=['GET', 'POST'])
+@app.route('/download/faces/<path:filename>',endpoint='faces', methods=['GET', 'POST'])
 def download(filename:str):
     if "." in filename:
         return """{{status:200,msg:"wrong file name"}}"""
@@ -141,23 +145,12 @@ def download(filename:str):
     elif request.endpoint.lower() == "base64":
         with open(os.path.join(uploadsurl, str(orginalFileName)), "rb") as fh:
             file= base64.b64encode(fh.read())
+    elif request.endpoint.lower() == "faces":
+        address,fileName = getFacees(orginalFileName)
+        file = send_from_directory(address, str(fileName))
     return file
 
 
-# @app.route('/downloadBase64/<path:fileID>', methods=['GET', 'POST'])
-# def downloadBase64(fileID:str):
-#     if "." in fileID:
-#         return """{{status:200,msg:"wrong file name"}}"""
-#     db_fileName = check_res_db(fileID)
-#     if (db_fileName or "")=="":
-#         return """{{status:200,msg:"file not exits"}}"""
-#     imagedata=""
-#     uploadsurl = getUploadUrl()
-#     #file = send_from_directory(uploadsurl, str(db_fileName))
-    
-#     with open(os.path.join(uploadsurl, str(db_fileName)), "rb") as fh:
-#        f= base64.b64encode(fh.read())
-#     return f
 
 @app.route('/all',methods = ["GET"])
 def getAllFileKeys():
@@ -177,7 +170,10 @@ def getArchiveUrl():
     #archiveFile = os.path.join(current_app.root_path, app.config['ARCHAVE_FILE'])
     return app.config['ARCHAVE_FILE']
 
-
+def GetRealFileAddress(fileName):
+    realfileName=check_res_db(filename=fileName)
+    fileUrl = getFileURL(realfileName)
+    return fileUrl
 
 def check_res_db(filename):
     orginalFileName = redis1.get(filename)
@@ -259,6 +255,8 @@ def checkDirectory():
 
         if not os.path.exists(app.config['UPLOAD_THUMBNAIL_FOLDER']):
             os.makedirs(app.config['UPLOAD_THUMBNAIL_FOLDER'])
+        if not os.path.exists(app.config['UPLOAD_FACES_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FACES_FOLDER'])
         True
     except:
         return False
@@ -272,6 +270,26 @@ def checkArchiveFile():
     except Exception as ex:
         print(ex)
         return False
+
+def getFacees(fileName):
+    #fileUrl =GetRealFileAddress(fileName=fileName)
+    img  = cv.imread(getFileURL(fileName))
+    face_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    #eye_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_eye.xml')
+    
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    # Detect faces
+    faces = face_cascade.detectMultiScale(gray, 1.1,4)
+    #eyes = eye_cascade.detectMultiScale(gray, 1.1,4)
+    # Draw rectangle around the faces
+    for (x, y, w, h) in faces:
+        cv.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    # for (x, y, w, h) in eyes:
+    #     cv.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    
+    faceFileAddress=os.path.join(app.config['UPLOAD_FACES_FOLDER'], fileName)
+    cv.imwrite(faceFileAddress,img)
+    return app.config['UPLOAD_FACES_FOLDER'],fileName
 
 
 
