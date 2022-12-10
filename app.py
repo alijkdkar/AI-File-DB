@@ -11,6 +11,7 @@ import base64
 import json
 import numpy as np
 import cv2 as cv
+import random 
 
 
 UPLOAD_FOLDER = 'uploads'
@@ -43,7 +44,6 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 
 #todo : comperess image on save
 #todo : comperess image on load
-#todo : face detection on image
 #todoooo : save date time of modiy images
 #todo : search on images
 #todo : Add saltToFileName
@@ -51,6 +51,7 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 # Done : load images as list
 # Done : load images as base64
 # Done : redefine redise db
+#Done : face detection on image
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
@@ -203,7 +204,7 @@ def compress_File(filePath):
 
     
 def getSecureFileName(orginalFileName:str):
-    filename = datetime.now().strftime('%Y%m%d%H%M%S')
+    filename = datetime.now().strftime('%Y%m%d%H%M%S') + str(random.randint(0,100000))
     return filename,filename +"."+ orginalFileName.split(".")[1]
 
 
