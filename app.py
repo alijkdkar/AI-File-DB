@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from flask import Flask, flash, jsonify, request, redirect, url_for
+from flask import Flask, flash, jsonify, request, redirect, url_for,render_template
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 from flask import current_app
@@ -28,7 +28,7 @@ ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
                                     , 'gif':'47 49 46 38 37 61'}
 
 
-app = Flask(__name__)
+app = Flask(__name__,template_folder="templates")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
 app.config['UPLOAD_THUMBNAIL_FOLDER'] = UPLOAD_THUMBNAIL_FOLDER
@@ -47,6 +47,13 @@ redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 #todoooo : save date time of modiy images
 #todo : search on images
 #todo : Add saltToFileName
+#todo : elestick search
+#todo : async
+#todo: repair just with special keys
+#todo : clear all project file and segmentation
+#todo : create biutifull appi calling 
+
+
 # Done : Get Tumb Nail
 # Done : load images as list
 # Done : load images as base64
@@ -69,7 +76,22 @@ def repair_redis():
     return """{{status:200,msg:"success "}}"""
 
 
-        
+def has_no_empty_params(rule):
+    defaults = rule.defaults if rule.defaults is not None else ()
+    arguments = rule.arguments if rule.arguments is not None else ()
+    return len(defaults) >= len(arguments)
+
+@app.route("/site-map")
+def site_map():
+    links = []
+    for rule in app.url_map.iter_rules():
+        # Filter out rules we can't navigate to in a browser
+        # and rules that require parameters
+        if "GET" in rule.methods and has_no_empty_params(rule):
+            url = url_for(rule.endpoint, **(rule.defaults or {}))
+            links.append((url, rule.endpoint))
+    # links is now a list of url, endpoint tuples
+    return render_template("index.html",links=links)
     
 
 
