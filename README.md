@@ -24,6 +24,7 @@ this use of redis.
 - [ ]  async
 - [ ]  repair just with special keys
 - [ ]  clear all project file and segmentation
-- [ ]  create biutifull appi calling 
+- [ ]  create biutifull appi calling
+- [ ]  create DashBoard and Login Page To login dashboard
 
 

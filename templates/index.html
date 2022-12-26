@@ -1,6 +1,7 @@
 {# index.html #}
 <ul>
-{% for url, endpoint in links %}
-<li><a href="{{ url }}">{{ endpoint }}</a></li>
+{% for item in links %}
+<li><a href="{{ item['url'] }}">{{ item['endpoint'] }}</a></li>
+<p>{{ item['params'] }}</p>
 {% endfor %}
 </ul>
