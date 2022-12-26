@@ -28,7 +28,7 @@ ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
                                     , 'gif':'47 49 46 38 37 61'}
 
 
-app = Flask(__name__,template_folder="templates")
+app = Flask(__name__,template_folder="templates",static_url_path='/static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
 app.config['UPLOAD_THUMBNAIL_FOLDER'] = UPLOAD_THUMBNAIL_FOLDER
@@ -42,6 +42,46 @@ app.config['UPLOAD_FACES_FOLDER'] = UPLOAD_FACES_FOLDER
 #redis1 = redis.Redis(host="some-redis",port="6379",db=0)
 redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 
+########### Web Pages ############
+
+
+
+@app.route("/")
+def site_map():
+
+    if redis1.get("SuperUser") == None:
+        return redirect(url_for('Wizard'))
+
+    links = []
+    for rule in app.url_map.iter_rules():
+        # Filter out rules we can't navigate to in a browser
+        # and rules that require parameters
+        if "GET" in rule.methods :#and has_no_empty_params(rule):
+            #url = url_for(rule.endpoint,)
+            params = rule.arguments
+            links.append({"url":rule,"endpoint": rule.endpoint,"params":params})
+    # links is now a list of url, endpoint tuples
+    return render_template("index.html",links=links)
+
+@app.route("/Wizard",methods=['GET','POST'])
+def Wizard():
+    if request.method == "GET":
+        return render_template("wizard.html",list=["",])
+    elif request.method == "POST":
+        username= request.form.get('username')
+        password= request.form.get('pass')
+        password2= request.form.get('pass2')
+        if password != password2 or username == '':
+            return render_template("wizard.html",list=["user name or password is wrong !",])
+        redis1.set('SuperUser',username)
+        redis1.set('SuperUserPassWord',password)
+        
+
+        return  """{{status:200,msg:"setup complit successully "}}"""
+        
+
+    
+########### Web Pages ############
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
@@ -58,25 +98,6 @@ def repair_redis():
 
     return """{{status:200,msg:"success "}}"""
 
-
-def has_no_empty_params(rule):
-    defaults = rule.defaults if rule.defaults is not None else ()
-    arguments = rule.arguments if rule.arguments is not None else ()
-    return len(defaults) >= len(arguments)
-
-@app.route("/")
-def site_map():
-    links = []
-    for rule in app.url_map.iter_rules():
-        # Filter out rules we can't navigate to in a browser
-        # and rules that require parameters
-        if "GET" in rule.methods :#and has_no_empty_params(rule):
-            #url = url_for(rule.endpoint,)
-            params = rule.arguments
-            links.append({"url":rule,"endpoint": rule.endpoint,"params":params})
-    # links is now a list of url, endpoint tuples
-    return render_template("index.html",links=links)
-    
 
 
 @app.route('/upload_file', methods=['GET', 'POST'])
