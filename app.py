@@ -42,23 +42,6 @@ app.config['UPLOAD_FACES_FOLDER'] = UPLOAD_FACES_FOLDER
 #redis1 = redis.Redis(host="some-redis",port="6379",db=0)
 redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 
-#todo : comperess image on save
-#todo : comperess image on load
-#todoooo : save date time of modiy images
-#todo : search on images
-#todo : Add saltToFileName
-#todo : elestick search
-#todo : async
-#todo: repair just with special keys
-#todo : clear all project file and segmentation
-#todo : create biutifull appi calling 
-
-
-# Done : Get Tumb Nail
-# Done : load images as list
-# Done : load images as base64
-# Done : redefine redise db
-#Done : face detection on image
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
@@ -81,21 +64,22 @@ def has_no_empty_params(rule):
     arguments = rule.arguments if rule.arguments is not None else ()
     return len(defaults) >= len(arguments)
 
-@app.route("/site-map")
+@app.route("/")
 def site_map():
     links = []
     for rule in app.url_map.iter_rules():
         # Filter out rules we can't navigate to in a browser
         # and rules that require parameters
-        if "GET" in rule.methods and has_no_empty_params(rule):
-            url = url_for(rule.endpoint, **(rule.defaults or {}))
-            links.append((url, rule.endpoint))
+        if "GET" in rule.methods :#and has_no_empty_params(rule):
+            #url = url_for(rule.endpoint,)
+            params = rule.arguments
+            links.append({"url":rule,"endpoint": rule.endpoint,"params":params})
     # links is now a list of url, endpoint tuples
     return render_template("index.html",links=links)
     
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/upload_file', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
@@ -175,12 +159,16 @@ def download(filename:str):
 
 
 
-@app.route('/all',methods = ["GET"])
+@app.route('/all',methods = ["GET","POST"])
 def getAllFileKeys():
     allkeys = redis1.keys("*")
     kes =[x.decode("utf-8") for x in allkeys ]
     return json.dumps(kes)
     #return "keys:[{0}]".format(kes)
+
+
+
+
 
 def getUploadUrl():
     uploadsurl = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
