@@ -63,6 +63,9 @@ def site_map():
     # links is now a list of url, endpoint tuples
     return render_template("index.html",links=links)
 
+
+
+
 @app.route("/Wizard",methods=['GET','POST'])
 def Wizard():
     if request.method == "GET":
@@ -71,10 +74,15 @@ def Wizard():
         username= request.form.get('username')
         password= request.form.get('pass')
         password2= request.form.get('pass2')
+        hashKey= request.form.get('inputhashCode')
+        
         if password != password2 or username == '':
             return render_template("wizard.html",list=["user name or password is wrong !",])
+
         redis1.set('SuperUser',username)
         redis1.set('SuperUserPassWord',password)
+        if hashKey != '':
+            redis1.set('FileHashKey',hashKey)
         
 
         return  """{{status:200,msg:"setup complit successully "}}"""

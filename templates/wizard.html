@@ -148,6 +148,9 @@ color:red;
 }
 </style>
 
+
+
+
 <html>
 <header>
     
@@ -160,20 +163,28 @@ color:red;
                     Setup
                     </span>
                     <div class="wrap-input100 validate-input m-b-20" data-validate="Enter username or email">
-                    <input class="input100" type="text" name="username" placeholder="username or email">
-                    <span class="focus-input100"></span>
+                        <input class="input100" type="text" name="username" placeholder="username or email">
+                        <span class="focus-input100"></span>
                     </div>
                     <div class="wrap-input100 validate-input m-b-25" data-validate="Enter password">
-                    <input class="input100" type="password" name="pass" placeholder="password">
-                    <span class="focus-input100"></span>
+                        <input class="input100" type="password" name="pass" placeholder="password">
+                        <span class="focus-input100"></span>
                     </div>
                     <div class="wrap-input100 validate-input m-b-25" data-validate="Enter password">
                         <input class="input100" type="password" name="pass2" placeholder="password">
                         <span class="focus-input100"></span>
                     </div>
+                   <div>
+                        <input type="checkbox" id="chkHashFile" name="chkHashFileN" value="Boat" onClick="chkHashFileCLick()">
+                        <label for="vehicle2"> Encrypt File content</label>
+                        <input class="input100" id="inputhashCode" placeholder="Hash KEY" style="visibility :hidden;">
+                   </div>
+
+                    <div>
                     {% for item in list %}
                         <p class="wronP"> {{ item }}</p>
                     {% endfor %}
+                   </div>
                     <div class="container-login100-form-btn">
                         <button class="login100-form-btn">
                         Done
@@ -187,3 +198,23 @@ color:red;
         </div>
     </body>
 </html>
+
+
+
+
+<script>
+    function chkHashFileCLick()
+    {    
+        debugger;
+        if ( document.getElementById("chkHashFile").checked )
+        {
+            
+            document.getElementById("inputhashCode").style.visibility = 'visible';
+        }
+        else
+        {
+            document.getElementById("inputhashCode").style.visibility = 'hidden';
+        }
+    }
+</script>
+    
