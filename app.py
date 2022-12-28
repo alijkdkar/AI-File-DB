@@ -150,6 +150,8 @@ def saveFileOnDirectory(file):
 
     if checkFileRealExtention(fileName=filePath):
         redis1.set(justfileName,filename)
+        if redis1.get('FileHashKey') != '':
+            pass #hash real file 
         return filename,justfileName
     else:
         os.remove(filePath)
