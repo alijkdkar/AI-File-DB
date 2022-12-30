@@ -69,15 +69,20 @@ def site_map():
 @app.route("/Wizard",methods=['GET','POST'])
 def Wizard():
     if request.method == "GET":
-        return render_template("wizard.html",list=["",])
+        return render_template("wizard.html",list=["",ALLOWED_EXTENSIONS_MAGIC_NUMBER,])
     elif request.method == "POST":
         username= request.form.get('username')
         password= request.form.get('pass')
         password2= request.form.get('pass2')
-        hashKey= request.form.get('inputhashCode')
+        hashKey= request.form.get('inputhashKey')
+        ext= request.form.get('extToHash').split('|')
+        if any(item not in ALLOWED_EXTENSIONS_MAGIC_NUMBER for item in ext):
+            
+           return render_template("wizard.html",list=["O No !!! this is bad requsts",])
         
         if password != password2 or username == '':
             return render_template("wizard.html",list=["user name or password is wrong !",])
+
 
         redis1.set('SuperUser',username)
         redis1.set('SuperUserPassWord',password)

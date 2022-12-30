@@ -175,15 +175,22 @@ color:red;
                         <span class="focus-input100"></span>
                     </div>
                    <div>
-                        <input type="checkbox" id="chkHashFile" name="chkHashFileN" value="Boat" onClick="chkHashFileCLick()">
+                        <input type="checkbox" id="chkHashFile" name="chkHashFileN" value="Boat" onClick="chkHashFileCLick()" />
                         <label for="vehicle2"> Encrypt File content</label>
-                        <input class="input100" id="inputhashCode" placeholder="Hash KEY" style="visibility :hidden;">
+                        <div id="hashPanel"  style="visibility :hidden;">
+                            <input  name="extToHash" >
+                            <input class="input100" id="inputhashCode" name="inputhashKey" placeholder="Hash KEY" >
+                            <div id="extPanel" >
+                                {% for item in list[1] %}
+                                    <input type="checkbox" id="{{ item }}"  name={{ item }} onClick="chkExtClick({{ item }})" />
+                                   <label> {{ item }}</label>
+                                {% endfor %}
+                            </div>
+                        </div>
                    </div>
 
                     <div>
-                    {% for item in list %}
-                        <p class="wronP"> {{ item }}</p>
-                    {% endfor %}
+                        <p class="wronP"> {{ list[0] }}</p>
                    </div>
                     <div class="container-login100-form-btn">
                         <button class="login100-form-btn">
@@ -209,12 +216,32 @@ color:red;
         if ( document.getElementById("chkHashFile").checked )
         {
             
-            document.getElementById("inputhashCode").style.visibility = 'visible';
+            document.getElementById("hashPanel").style.visibility = 'visible';
         }
         else
         {
-            document.getElementById("inputhashCode").style.visibility = 'hidden';
+            document.getElementById("hashPanel").style.visibility = 'hidden';
         }
     }
+
+
+
+    function chkExtClick(self)
+    {    
+        debugger;
+        console.log(self)
+        if(self.checked)
+        {
+            if(document.getElementsByName("extToHash")[0].value ==undefined )
+            {
+                document.getElementsByName("extToHash")[0].value = self.name+'|';
+            }else{document.getElementsByName("extToHash")[0].value += self.name+'|';}
+            
+        }else{
+            document.getElementsByName("extToHash")[0].value =  document.getElementsByName("extToHash")[0].value.replace(self.name+'|','') 
+        }
+
+    }
+
 </script>
     
