@@ -4,6 +4,10 @@ it's safe on save file and tested with some profisnal hackers.
 
 
 this use of redis.
+Used of Golang for encreption uploaded file 
+we impelimated go file hasher by pipline design patterns
+
+
 
 # Done 
 - [x] Get Tumb Nail
@@ -26,5 +30,6 @@ this use of redis.
 - [ ]  clear all project file and segmentation
 - [ ]  create biutifull appi calling
 - [ ]  create DashBoard and Login Page To login dashboard
+- [ ]  get Multi Hash Key and encrypt file by random key
 
 

@@ -12,6 +12,8 @@ import json
 import numpy as np
 import cv2 as cv
 import random 
+from domains.enums import setting as appset
+import Encryptor as ency
 
 
 UPLOAD_FOLDER = 'uploads'
@@ -63,18 +65,33 @@ def site_map():
     # links is now a list of url, endpoint tuples
     return render_template("index.html",links=links)
 
+
+
+
 @app.route("/Wizard",methods=['GET','POST'])
 def Wizard():
     if request.method == "GET":
-        return render_template("wizard.html",list=["",])
+        return render_template("wizard.html",list=["",ALLOWED_EXTENSIONS_MAGIC_NUMBER,])
     elif request.method == "POST":
         username= request.form.get('username')
         password= request.form.get('pass')
         password2= request.form.get('pass2')
+        hashKey= request.form.get('inputhashKey')
+        ext= request.form.get('extToHash').split('|')
+        ext.pop()
+        if any(item not in ALLOWED_EXTENSIONS_MAGIC_NUMBER for item in ext):
+            
+           return render_template("wizard.html",list=["O No !!! this is bad requsts",ALLOWED_EXTENSIONS_MAGIC_NUMBER,])
+        
         if password != password2 or username == '':
-            return render_template("wizard.html",list=["user name or password is wrong !",])
-        redis1.set('SuperUser',username)
-        redis1.set('SuperUserPassWord',password)
+            return render_template("wizard.html",list=["user name or password is wrong !",ALLOWED_EXTENSIONS_MAGIC_NUMBER,])
+
+
+        redis1.set(appset.SuperUser,username)
+        redis1.set(appset.SuperUserPassWord,password)
+        redis1.set(appset.fileExtentionToHash,str.join("|" ,ext))
+        if hashKey != '':
+            redis1.set(appset.FileHashKey,hashKey)
         
 
         return  """{{status:200,msg:"setup complit successully "}}"""
@@ -142,6 +159,7 @@ def saveFileOnDirectory(file):
 
     if checkFileRealExtention(fileName=filePath):
         redis1.set(justfileName,filename)
+        EncryptFile(filePath)
         return filename,justfileName
     else:
         os.remove(filePath)
@@ -323,6 +341,13 @@ def getFacees(fileName):
     cv.imwrite(faceFileAddress,img)
     return app.config['UPLOAD_FACES_FOLDER'],fileName
 
+
+def EncryptFile(fileName):
+    if redis1.get(appset.FileHashKey) != None:
+        extsMustHash = redis1.get(appset.fileExtentionToHash).decode("utf-8") 
+        if getFileFileExtention(fileName) in str(extsMustHash).split("|"):
+            enc = ency.Encryptor()
+            print(id(enc))
 
 
 @app.after_request
