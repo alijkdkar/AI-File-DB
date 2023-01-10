@@ -2,7 +2,17 @@
 from cryptography.fernet import Fernet
 
 
+def singleton(class_):
+    instances = {}
+    def getinstance(*args, **kwargs):
+        if class_ not in instances:
+            instances[class_] = class_(*args, **kwargs)
+        return instances[class_]
+    return getinstance
+
+@singleton
 class Encryptor():
+   
 
     def key_create(self):
         key = Fernet.generate_key()
@@ -26,9 +36,9 @@ class Encryptor():
             original = file.read()
 
         encrypted = f.encrypt(original)
-
-        with open (encrypted_file, 'wb') as file:
-            file.write(encrypted)
+        return encrypted
+        # with open (encrypted_file, 'wb') as file:
+        #     file.write(encrypted)
 
     def file_decrypt(self, key, encrypted_file, decrypted_file):
         
@@ -38,6 +48,6 @@ class Encryptor():
             encrypted = file.read()
 
         decrypted = f.decrypt(encrypted)
-
-        with open(decrypted_file, 'wb') as file:
-            file.write(decrypted)
+        return decrypted
+        # with open(decrypted_file, 'wb') as file:
+        #     file.write(decrypted)
