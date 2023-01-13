@@ -32,4 +32,6 @@ we impelimated go file hasher by pipline design patterns
 - [ ]  create DashBoard and Login Page To login dashboard
 - [ ]  get Multi Hash Key and encrypt file by random key
 
+# HOW It Works:
 
+![alt text](https://github.com/alijkdkar/AI-File-DB/blob/main/Untitled.drawio.png?raw=true)
