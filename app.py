@@ -86,7 +86,7 @@ def Wizard():
         if password != password2 or username == '':
             return render_template("wizard.html",list=["user name or password is wrong !",ALLOWED_EXTENSIONS_MAGIC_NUMBER,])
 
-
+        
         redis1.set(appset.SuperUser,username)
         redis1.set(appset.SuperUserPassWord,password)
         redis1.set(appset.fileExtentionToHash,str.join("|" ,ext))
@@ -159,7 +159,7 @@ def saveFileOnDirectory(file):
 
     if checkFileRealExtention(fileName=filePath):
         redis1.set(justfileName,filename)
-        EncryptFile(filePath)
+        EncryptFile(justfileName)
         return filename,justfileName
     else:
         os.remove(filePath)
@@ -296,7 +296,8 @@ def getFileFileExtention(file):
     if '.' in file:
         return file and file.split(".")[1]
     else:
-        return None
+        realFileName =redis1.get(file).decode("utf-8")
+        return realFileName and realFileName.split(".")[1]
     
 def checkDirectory():
     try:
@@ -345,9 +346,9 @@ def getFacees(fileName):
 def EncryptFile(fileName):
     if redis1.get(appset.FileHashKey) != None:
         extsMustHash = redis1.get(appset.fileExtentionToHash).decode("utf-8") 
+        
         if getFileFileExtention(fileName) in str(extsMustHash).split("|"):
-            enc = ency.Encryptor()
-            print(id(enc))
+            redis1.publish("HashChannel",fileName)
 
 
 @app.after_request
