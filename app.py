@@ -4,30 +4,13 @@ from flask import Flask, flash, jsonify, request, redirect, url_for,render_templ
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 from flask import current_app
-import redis 
-import binascii
-import zipfile
 import base64
 import json
-import numpy as np
 import cv2 as cv
-import random 
 from domains.enums import setting as appset
-import Encryptor as ency
+from Models.FileViewModels import UPLOAD_FOLDER,ARCHAVE_FILE,UPLOAD_THUMBNAIL_FOLDER,UPLOAD_FACES_FOLDER,ALLOWED_EXTENSIONS_MAGIC_NUMBER,ARCHIVE_PASSWORD,ALLOWED_EXTENSIONS
+from Models import RedisORM,FileViewModels
 
-
-UPLOAD_FOLDER = 'uploads'
-UPLOAD_THUMBNAIL_FOLDER = 'uploads/thumbnail'
-UPLOAD_FACES_FOLDER = 'uploads/Faces'
-ARCHAVE_FILE = 'uploads/archive.zip'
-ARCHIVE_PASSWORD = b"dsdy8271@#&^$&(!@#ayan0928S#B"
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
-                                    , 'pdf':'25 50 44 46 2D'
-                                    , 'png':'89 50 4E 47 0D 0A 1A 0A'
-                                    , 'jpg':'FF D8 FF E0'
-                                    , 'jpeg':'FF D8 FF'
-                                    , 'gif':'47 49 46 38 37 61'}
 
 
 app = Flask(__name__,template_folder="templates",static_url_path='/static')
@@ -36,15 +19,10 @@ app.config['ARCHAVE_FILE'] = ARCHAVE_FILE
 app.config['UPLOAD_THUMBNAIL_FOLDER'] = UPLOAD_THUMBNAIL_FOLDER
 app.config['UPLOAD_FACES_FOLDER'] = UPLOAD_FACES_FOLDER
 
-# app.config['REDIS_HOST'] = '127.0.0.1'
-# app.config['REDIS_PORT'] = 6379
-# app.config['REDIS_DB'] = 0
-#redis1 = Redis(app)
-
-#redis1 = redis.Redis(host="some-redis",port="6379",db=0)
-redis1 = redis.Redis(host="127.0.0.1",port="6379",db=0)
 
 ########### Web Pages ############
+redis1 = RedisORM.mRedis()._redis
+mFile = FileViewModels.mFile(RedisDB=redis1,FlaskApp=app,current_app=current_app)
 
 
 
@@ -102,7 +80,7 @@ def Wizard():
 
 @app.route('/repair', methods=['GET', 'POST'])
 def repair_redis():
-    checkDirectory()
+    mFile.checkDirectory()
     files =os.listdir(app.config['UPLOAD_FOLDER'])
     for file in files:
         
@@ -130,11 +108,11 @@ def upload_file():
         if file.filename == '':
             return """{{status:200,msg:"No selected file"}}"""
         
-        if checkDirectory() ==False:
+        if mFile.checkDirectory() ==False:
             return """{{status:500,msg:"Some thing wrong"}}"""
         
-        if file and allowed_file(file.filename):
-            filename, justfileName = saveFileOnDirectory(file)
+        if file and mFile.allowed_file(file.filename):
+            filename, justfileName = mFile.saveFileOnDirectory(file)
             if filename is None or justfileName is None:
                 return """{{status:200,msg:"File extention has damaged"}}"""
             return jsonify(f"file_name:{justfileName}")
@@ -148,24 +126,6 @@ def upload_file():
     </form>
     '''
 
-def saveFileOnDirectory(file):
-    filename = secure_filename(file.filename)
-    justfileName ,filename = getSecureFileName(file.filename)
-            #path = current_app.root_path+"/"+app.config['UPLOAD_FOLDER']+
-    filePath = os.path.join(current_app.root_path,app.config['UPLOAD_FOLDER'], filename)
-    file.save(filePath)
-    compress_File(filePath=os.path.join(app.config['UPLOAD_FOLDER'] ,filename) )
-
-
-    if checkFileRealExtention(fileName=filePath):
-        redis1.set(justfileName,filename)
-        EncryptFile(justfileName)
-        return filename,justfileName
-    else:
-        os.remove(filePath)
-        return None,None
-
-
 
 
 ### begin ### down load 
@@ -177,14 +137,16 @@ def saveFileOnDirectory(file):
 def download(filename:str):
     if "." in filename:
         return """{{status:200,msg:"wrong file name"}}"""
-    orginalFileName = check_res_db(filename) 
+    orginalFileName = mFile.check_res_db(filename) 
     if (orginalFileName or "") == "":
         return """{{status:200,msg:"file not exits"}}"""
-    uploadsurl = getUploadUrl()
+    uploadsurl = mFile.getUploadUrl()
     
     
     if request.endpoint.lower()=='tumbnail':
-        tmpath,fName = GetThumbNail(orginalFileName)
+        tmpath,fName = mFile.GetThumbNail(orginalFileName)
+        if tmpath is None or fName is None:
+            return  """{{status:200,msg:"wrong file Format for this Actions"}}"""
         file = send_from_directory(tmpath,fName)
     elif request.endpoint.lower()=='file':
         file = send_from_directory(uploadsurl, str(orginalFileName))
@@ -205,126 +167,12 @@ def getAllFileKeys():
     return json.dumps(kes)
     #return "keys:[{0}]".format(kes)
 
-
-
-
-
-def getUploadUrl():
-    uploadsurl = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return uploadsurl
-
-def getFileURL(fileName):
-    return os.path.join(getUploadUrl(), str(fileName))
-
-def getArchiveUrl():
-    #archiveFile = os.path.join(current_app.root_path, app.config['ARCHAVE_FILE'])
-    return app.config['ARCHAVE_FILE']
-
-def GetRealFileAddress(fileName):
-    realfileName=check_res_db(filename=fileName)
-    fileUrl = getFileURL(realfileName)
-    return fileUrl
-
-def check_res_db(filename):
-    orginalFileName = redis1.get(filename)
-    orginalFileName = orginalFileName.decode("utf-8")
-    return orginalFileName
-
-
-
-### end ### download
-
-def compress_File(filePath):
     
 
-
-    try:
-        if(checkArchiveFile() == False ):
-            return
-
-        with zipfile.ZipFile(getArchiveUrl(), "a") as zf:
-            zf.write(filePath)
-            zf.setpassword(ARCHIVE_PASSWORD)
-            zf.close()
-        return True
-    except Exception as ex:
-        print(ex)
-        return False
-
-    
-def getSecureFileName(orginalFileName:str):
-    filename = datetime.now().strftime('%Y%m%d%H%M%S') + str(random.randint(0,100000))
-    return filename,filename +"."+ orginalFileName.split(".")[1]
-
-
-def GetThumbNail(fileName):
-    """get file Name as input and  return path and file Name as output """
-    try:
-        filepath = getFileURL(fileName)
-        img = cv.imread(filepath)
-        thumbNailSize=(100,100)
-        imRes = cv.resize(img,thumbNailSize,interpolation=cv.INTER_CUBIC)
-        thumbFilePath=os.path.join(app.config['UPLOAD_THUMBNAIL_FOLDER'], fileName)
-        cv.imwrite( thumbFilePath,imRes)
-        return app.config['UPLOAD_THUMBNAIL_FOLDER'] , fileName
-    except:
-        return None
-
-    
-
-
-
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-    
-def checkFileRealExtention(fileName):
-    fileExt = getFileFileExtention(fileName)
-    magicNum = ALLOWED_EXTENSIONS_MAGIC_NUMBER[fileExt]
-    with open(fileName, mode='rb') as file: # b is important -> binary
-        fileContent = file.read()
-        header = str(binascii.hexlify(fileContent))[2:-1]
-    if header.startswith(magicNum.lower().replace(' ','')):
-        return True
-    else:
-        return False
-
-
-
-def getFileFileExtention(file):
-    if '.' in file:
-        return file and file.split(".")[1]
-    else:
-        realFileName =redis1.get(file).decode("utf-8")
-        return realFileName and realFileName.split(".")[1]
-    
-def checkDirectory():
-    try:
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
-
-        if not os.path.exists(app.config['UPLOAD_THUMBNAIL_FOLDER']):
-            os.makedirs(app.config['UPLOAD_THUMBNAIL_FOLDER'])
-        if not os.path.exists(app.config['UPLOAD_FACES_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FACES_FOLDER'])
-        True
-    except:
-        return False
-
-
-def checkArchiveFile():
-    try:
-        if not os.path.exists(app.config['ARCHAVE_FILE']):
-            open(app.config['ARCHAVE_FILE'],"w")
-        return True
-    except Exception as ex:
-        print(ex)
-        return False
 
 def getFacees(fileName):
     #fileUrl =GetRealFileAddress(fileName=fileName)
-    img  = cv.imread(getFileURL(fileName))
+    img  = cv.imread(mFile.getFileURL(fileName))
     face_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_frontalface_default.xml')
     #eye_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_eye.xml')
     
@@ -341,14 +189,6 @@ def getFacees(fileName):
     faceFileAddress=os.path.join(app.config['UPLOAD_FACES_FOLDER'], fileName)
     cv.imwrite(faceFileAddress,img)
     return app.config['UPLOAD_FACES_FOLDER'],fileName
-
-
-def EncryptFile(fileName):
-    if redis1.get(appset.FileHashKey) != None:
-        extsMustHash = redis1.get(appset.fileExtentionToHash).decode("utf-8") 
-        
-        if getFileFileExtention(fileName) in str(extsMustHash).split("|"):
-            redis1.publish("HashChannel",fileName)
 
 
 @app.after_request
