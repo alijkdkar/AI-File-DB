@@ -30,7 +30,7 @@ ALLOWED_EXTENSIONS_MAGIC_NUMBER = {'txt':'EF BB BF'
 
 class mFile():
 
-    _redisDB = None
+    _redisDB :redis.Redis = None
     _app = None
     _current_app = None
 
@@ -49,9 +49,13 @@ class mFile():
         file.save(filePath)
         self.compress_File(filePath=os.path.join(self._app.config['UPLOAD_FOLDER'] ,filename) )
         if self.checkFileRealExtention(fileName=filePath):
-            self._redisDB.set(justfileName,filename)
+            #self._redisDB.set(justfileName,filename)
             #toto: set hash key for save full path of file
-            #self._redisDB.hsetnx(justfileName,key="filePath",value=filePath)
+            # self._redisDB.hsetnx(justfileName,key="filePath",value=filePath)
+            mapping=dict()
+            mapping["RealFileName"]=filename
+            mapping["FilePath"]=filePath
+            self._redisDB.hset(justfileName,mapping=mapping)
             self.EncryptFile(justfileName)
             return filename,justfileName
         else:
@@ -70,7 +74,7 @@ class mFile():
         fileUrl = self.getFileURL(realfileName)
         return fileUrl
     def check_res_db(self,filename):
-        orginalFileName = self._redisDB.get(filename)
+        orginalFileName = self._redisDB.hget(filename,"RealFileName")
         orginalFileName = orginalFileName.decode("utf-8")
         return orginalFileName
     def compress_File(self,filePath):
@@ -99,7 +103,7 @@ class mFile():
             cv.imwrite( thumbFilePath,imRes)
             return self._app.config['UPLOAD_THUMBNAIL_FOLDER'] , fileName
         except:
-            return None
+            return None,None
     def allowed_file(self,filename):
         return '.' in filename and \
                filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -117,7 +121,7 @@ class mFile():
         if '.' in file:
             return file and file.split(".")[1]
         else:
-            realFileName =self._redisDB.get(file).decode("utf-8")
+            realFileName =self._redisDB.hget(file,"RealFileName").decode("utf-8")
             return realFileName and realFileName.split(".")[1]
     def checkDirectory(self):
         try:

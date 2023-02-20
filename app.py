@@ -145,6 +145,8 @@ def download(filename:str):
     
     if request.endpoint.lower()=='tumbnail':
         tmpath,fName = mFile.GetThumbNail(orginalFileName)
+        if tmpath is None or fName is None:
+            return  """{{status:200,msg:"wrong file Format for this Actions"}}"""
         file = send_from_directory(tmpath,fName)
     elif request.endpoint.lower()=='file':
         file = send_from_directory(uploadsurl, str(orginalFileName))
