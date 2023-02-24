@@ -16,6 +16,7 @@ import redis
 UPLOAD_FOLDER = 'uploads'
 UPLOAD_THUMBNAIL_FOLDER = 'uploads/thumbnail'
 UPLOAD_FACES_FOLDER = 'uploads/Faces'
+UPLOAD_HASHED_FOLDER = 'uploads/Hashed'
 ARCHAVE_FILE = 'uploads/archive.zip'
 ARCHIVE_PASSWORD = b"dsdy8271@#&^$&(!@#ayan0928S#B"
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -131,6 +132,8 @@ class mFile():
                 os.makedirs(self._app.config['UPLOAD_THUMBNAIL_FOLDER'])
             if not os.path.exists(self._app.config['UPLOAD_FACES_FOLDER']):
                 os.makedirs(self._app.config['UPLOAD_FACES_FOLDER'])
+            if not os.path.exists(self._app.config['UPLOAD_HASHED_FOLDER']):
+                os.makedirs(self._app.config['UPLOAD_HASHED_FOLDER'])
             True
         except:
             return False
